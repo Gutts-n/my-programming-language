@@ -1,0 +1,7 @@
+[package]
+name = "programming-language"
+version = "0.1.0"
+authors = ["Gutts-n <57202549+Gutts-n@users.noreply.github.com>"]
+
+[dependencies]
+regex = "1"
