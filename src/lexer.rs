@@ -70,15 +70,6 @@ impl Token {
             line,
         }
     }
-
-    fn clone(&self) -> Self {
-        Token {
-            token_type: self.token_type.clone(),
-            lexeme: self.lexeme.clone(),
-            literal: self.literal.clone(),
-            line: self.line.clone()
-        }
-    }
 }
 
 struct Scanner {
