@@ -2,7 +2,7 @@ extern crate regex;
 
 use self::regex::Regex;
 
-#[derive(Clone)] 
+#[derive(Clone)]
 enum TokenType {
     // Single-character tokens.
     LEFT_PAREN,
@@ -57,12 +57,12 @@ enum TokenType {
 struct Token {
     token_type: TokenType,
     lexeme: String,
-    literal: Option<Box<dyn std::any::Any>>,
+    literal: Option<String>,
     line: u32,
 }
 
 impl Token {
-    fn new(token_type: TokenType, lexeme: String, literal: Option<Box<dyn std::any::Any>>, line: u32) -> Token {
+    fn new(token_type: TokenType, lexeme: String, literal: Option<String>, line: u32) -> Token {
         Token {
             token_type,
             lexeme,
@@ -87,29 +87,32 @@ impl Scanner {
             tokens: Vec::new(),
             start: 0,
             current: 0,
-            line: 1
+            line: 1,
         }
     }
- fn advance(&mut self) -> Option<char> {
-     self.current += 1;
-    return self.source_code.chars().nth(self.current as usize);
-  }
+    fn advance(&mut self) -> Option<char> {
+        self.current += 1;
+        return self.source_code.chars().nth(self.current as usize);
+    }
 
-   fn add_token_with_type(&self, type: TokenType) {
-    selfadd_token(type, None);
-  }
+    fn add_token_with_type(&mut self, token_type: TokenType) {
+        self.add_token(token_type, None);
+    }
 
-   fn add_token(&self, type: TokenType, literal: Option<String>) {
-    let text = &self.source_code[self.start as usize..self.current as usize];
-    self.tokens.push(Token::new(type, text, literal, self.line));
-  }
+    fn add_token(&mut self, token_type: TokenType, literal: Option<String>) {
+        let text = &self.source_code[self.start as usize..self.current as usize];
+        self.tokens
+            .push(Token::new(token_type, text.to_string(), literal, self.line));
+    }
+
     fn scan_tokens(&mut self) -> Vec<Token> {
         while !self.isAtEnd() {
             self.start = self.current;
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(TokenType::EOF, String::new(), None, self.line));
+        self.tokens
+            .push(Token::new(TokenType::EOF, String::new(), None, self.line));
         return self.tokens.clone();
     }
 
@@ -118,21 +121,23 @@ impl Scanner {
     }
 
     fn scan_token(&self) {
-    let c = self.advance();
-    match c {
-      Some('(') => self.add_token_with_type(TokenType::LEFT_PAREN),
-Some(      ')') => self.add_token_with_type(TokenType::RIGHT_PAREN),
-     Some( '{') => self.add_token_with_type(TokenType::LEFT_BRACE),
-Some(      '}') => self.add_token_with_type(TokenType::RIGHT_BRACE),
-      Some(',') => self.add_token_with_type(TokenType::COMMA),
-Some(      '.') => self.add_token_with_type(TokenType::DOT),
-Some(      '-') => self.add_token_with_type(TokenType::MINUS),
-Some(      '+') => self.add_token_with_type(TokenType::PLUS),
-Some(      ';') => self.add_token_with_type(TokenType::SEMICOLON),
-Some(      '*') => self.add_token_with_type(TokenType::STAR),
+        let c = self.advance();
+        match c {
+            Some('(') => self.add_token_with_type(TokenType::LEFT_PAREN),
+            Some(')') => self.add_token_with_type(TokenType::RIGHT_PAREN),
+            Some('{') => self.add_token_with_type(TokenType::LEFT_BRACE),
+            Some('}') => self.add_token_with_type(TokenType::RIGHT_BRACE),
+            Some(',') => self.add_token_with_type(TokenType::COMMA),
+            Some('.') => self.add_token_with_type(TokenType::DOT),
+            Some('-') => self.add_token_with_type(TokenType::MINUS),
+            Some('+') => self.add_token_with_type(TokenType::PLUS),
+            Some(';') => self.add_token_with_type(TokenType::SEMICOLON),
+            Some('*') => self.add_token_with_type(TokenType::STAR),
+            None => {}
+        }
     }
-  }
 }
+
 pub fn generate_tokens(text: &str) {
     let string_regex = Regex::new(r#""[\w\s]*""#).unwrap();
     let number_regex = Regex::new(r"\d+\.?\d+").unwrap();
