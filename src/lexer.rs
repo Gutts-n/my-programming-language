@@ -5,17 +5,17 @@ use self::regex::Regex;
 #[derive(Clone)]
 enum TokenType {
     // Single-character tokens.
-    LEFT_PAREN,
-    RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
-    COMMA,
-    DOT,
-    MINUS,
-    PLUS,
-    SEMICOLON,
+    LeftParen,
+    RigthParen,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Semicolon,
     SLASH,
-    STAR,
+    Start,
 
     // One or two character tokens.
     Bang,
@@ -51,6 +51,7 @@ enum TokenType {
     WHILE,
 
     EOF,
+    EqualAndEqual,
 }
 
 #[derive(Clone)]
@@ -90,6 +91,7 @@ impl Scanner {
             line: 1,
         }
     }
+
     fn advance(&mut self) -> Option<char> {
         self.current += 1;
         return self.source_code.chars().nth(self.current as usize);
@@ -106,7 +108,7 @@ impl Scanner {
     }
 
     fn scan_tokens(&mut self) -> Vec<Token> {
-        while !self.isAtEnd() {
+        while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
         }
@@ -116,24 +118,116 @@ impl Scanner {
         return self.tokens.clone();
     }
 
-    fn isAtEnd(&self) -> bool {
+    fn is_at_end(&self) -> bool {
         return self.current >= self.source_code.len() as u32;
     }
 
-    fn scan_token(&self) {
+    fn scan_token(&mut self) {
         let c = self.advance();
         match c {
-            Some('(') => self.add_token_with_type(TokenType::LEFT_PAREN),
-            Some(')') => self.add_token_with_type(TokenType::RIGHT_PAREN),
-            Some('{') => self.add_token_with_type(TokenType::LEFT_BRACE),
-            Some('}') => self.add_token_with_type(TokenType::RIGHT_BRACE),
-            Some(',') => self.add_token_with_type(TokenType::COMMA),
-            Some('.') => self.add_token_with_type(TokenType::DOT),
-            Some('-') => self.add_token_with_type(TokenType::MINUS),
-            Some('+') => self.add_token_with_type(TokenType::PLUS),
-            Some(';') => self.add_token_with_type(TokenType::SEMICOLON),
-            Some('*') => self.add_token_with_type(TokenType::STAR),
-            None => {}
+            Some('(') => self.add_token_with_type(TokenType::LeftParen),
+            Some(')') => self.add_token_with_type(TokenType::RigthParen),
+            Some('{') => self.add_token_with_type(TokenType::LeftBrace),
+            Some('}') => self.add_token_with_type(TokenType::RightBrace),
+            Some(',') => self.add_token_with_type(TokenType::Comma),
+            Some('.') => self.add_token_with_type(TokenType::Dot),
+            Some('-') => self.add_token_with_type(TokenType::Minus),
+            Some('+') => self.add_token_with_type(TokenType::Plus),
+            Some(';') => self.add_token_with_type(TokenType::Semicolon),
+            Some('*') => self.add_token_with_type(TokenType::Start),
+            // These next validations are comparing the next character after the current one and
+            // validating if its a equal to return the symbol + equal combination
+            Some('!') => {
+                let token_type = if self.validate_symbol('=') {
+                    TokenType::BangOrEqual
+                } else {
+                    TokenType::Bang
+                };
+                self.add_token_with_type(token_type)
+            }
+            Some('=') => {
+                let token_type = if self.validate_symbol('=') {
+                    TokenType::EqualAndEqual
+                } else {
+                    TokenType::Equal
+                };
+                self.add_token_with_type(token_type)
+            }
+            Some('<') => {
+                let token_type = if self.validate_symbol('=') {
+                    TokenType::LessOrEqual
+                } else {
+                    TokenType::Less
+                };
+                self.add_token_with_type(token_type)
+            }
+            Some('>') => {
+                let token_type = if self.validate_symbol('=') {
+                    TokenType::GreaterOrEqual
+                } else {
+                    TokenType::Greater
+                };
+                self.add_token_with_type(token_type)
+            }
+            Some('/') => {
+                // This code is validating if there is a dual slash and ignoring anything inside of
+                // this because it represents a commentary
+                if self.validate_symbol('/') {
+                    while self.peek().unwrap() != '\n' && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token_with_type(TokenType::SLASH)
+                };
+            }
+            Some('"') => self.string(),
+            Some('\n') => self.line = self.line + 1,
+            Some(' ') => {}
+            Some('\r') => {}
+            Some('\t') => {}
+            none => {
+                // TODO change this line after
+                panic!("Error token \"{}\"not recognized", none.unwrap_or('?'));
+            }
+        }
+    }
+
+    fn string(&mut self) {
+        while self.peek().unwrap() != '"' && !self.is_at_end() {
+            if self.peek().unwrap() == '\n' {
+                self.line = self.line + 1
+            }
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            panic!("Line: {} Unterminated string", self.line)
+        }
+
+        self.advance();
+
+        let end = self.current - 1;
+        let start = self.start + 1;
+        let value = &self.source_code[start as usize..end as usize];
+        self.add_token(TokenType::String, value);
+    }
+
+    fn peek(&self) -> Option<char> {
+        if self.is_at_end() {
+            return Some('\0');
+        }
+
+        return self.source_code.chars().nth(self.current as usize);
+    }
+
+    fn validate_symbol(&mut self, c: char) -> bool {
+        match self.is_at_end() || self.source_code.chars().nth(self.current as usize).unwrap() != c
+        {
+            true => return false,
+            false => {
+                self.current = self.current + 1;
+                return true;
+            }
         }
     }
 }
