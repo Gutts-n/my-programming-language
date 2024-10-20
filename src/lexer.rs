@@ -1,6 +1,6 @@
 extern crate regex;
-
 use self::regex::Regex;
+use std::any::Any;
 
 #[derive(Clone)]
 enum TokenType {
@@ -54,16 +54,20 @@ enum TokenType {
     EqualAndEqual,
 }
 
-#[derive(Clone)]
 struct Token {
     token_type: TokenType,
     lexeme: String,
-    literal: Option<String>,
+    literal: Option<Box<dyn Any>>,
     line: u32,
 }
 
 impl Token {
-    fn new(token_type: TokenType, lexeme: String, literal: Option<String>, line: u32) -> Token {
+    fn new(
+        token_type: TokenType,
+        lexeme: String,
+        literal: Option<Box<dyn Any>>,
+        line: u32,
+    ) -> Token {
         Token {
             token_type,
             lexeme,
@@ -101,13 +105,13 @@ impl Scanner {
         self.add_token(token_type, None);
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: Option<String>) {
+    fn add_token(&mut self, token_type: TokenType, literal: Option<Box<dyn Any>>) {
         let text = &self.source_code[self.start as usize..self.current as usize];
         self.tokens
             .push(Token::new(token_type, text.to_string(), literal, self.line));
     }
 
-    fn scan_tokens(&mut self) -> Vec<Token> {
+    fn scan_tokens(&mut self) -> &Vec<Token> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
@@ -115,7 +119,7 @@ impl Scanner {
 
         self.tokens
             .push(Token::new(TokenType::EOF, String::new(), None, self.line));
-        return self.tokens.clone();
+        return &self.tokens;
     }
 
     fn is_at_end(&self) -> bool {
@@ -185,6 +189,13 @@ impl Scanner {
             Some(' ') => {}
             Some('\r') => {}
             Some('\t') => {}
+            _ => {
+                if (self.is_digit(_)) {
+                    self.number()
+                } else {
+                    panic!("Error token \"{}\"not recognized", none.unwrap_or('?'));
+                }
+            }
             none => {
                 // TODO change this line after
                 panic!("Error token \"{}\"not recognized", none.unwrap_or('?'));
@@ -204,12 +215,44 @@ impl Scanner {
             panic!("Line: {} Unterminated string", self.line)
         }
 
+        // The closing ".
         self.advance();
 
+        // Trim the surrounding quotes.
         let end = self.current - 1;
         let start = self.start + 1;
         let value = &self.source_code[start as usize..end as usize];
-        self.add_token(TokenType::String, value);
+        self.add_token(TokenType::String, Some(Box::new(value.to_string())));
+    }
+
+    fn is_digit(&self, c: char) -> bool {
+        return c >= '0' && c <= '9';
+    }
+
+    fn number(&mut self) {
+        while self.is_digit(self.peek().unwrap()) {
+            self.advance();
+        }
+
+        if self.peek().unwrap() == '.' && self.is_digit(self.peek_next().unwrap()) {
+            self.advance();
+
+            while self.is_digit(self.peek().unwrap()) {
+                self.advance();
+            }
+        }
+        match self.source_code[self.start as usize..self.current as usize].parse::<f64>() {
+            Ok(value) => self.add_token(TokenType::Number, Some(Box::new(value))),
+            Err(e) => panic!("Failed to parse: {}", e),
+        }
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        if self.current + 1 >= self.source_code.len() as u32 {
+            return Some('\0');
+        }
+
+        return self.source_code.chars().nth((self.current + 1) as usize);
     }
 
     fn peek(&self) -> Option<char> {
