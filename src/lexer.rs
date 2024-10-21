@@ -1,6 +1,7 @@
 extern crate regex;
 use self::regex::Regex;
 use std::any::Any;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 enum TokenType {
@@ -139,6 +140,11 @@ impl Scanner {
             Some('+') => self.add_token_with_type(TokenType::Plus),
             Some(';') => self.add_token_with_type(TokenType::Semicolon),
             Some('*') => self.add_token_with_type(TokenType::Start),
+            Some('o') => {
+                if self.validate_symbol('r') {
+                    self.add_token_with_type(TokenType::OR);
+                }
+            }
             // These next validations are comparing the next character after the current one and
             // validating if its a equal to return the symbol + equal combination
             Some('!') => {
@@ -189,16 +195,18 @@ impl Scanner {
             Some(' ') => {}
             Some('\r') => {}
             Some('\t') => {}
-            _ => {
-                if (self.is_digit(_)) {
+            default => {
+                if self.is_digit(default.unwrap()) {
                     self.number()
+                } else if self.is_alpha(default.unwrap()) {
+                    self.identifier();
                 } else {
-                    panic!("Error token \"{}\"not recognized", none.unwrap_or('?'));
+                    panic!(
+                        "Error token \"{}\"not recognized, at line {}",
+                        default.unwrap_or('?'),
+                        self.line
+                    );
                 }
-            }
-            none => {
-                // TODO change this line after
-                panic!("Error token \"{}\"not recognized", none.unwrap_or('?'));
             }
         }
     }
@@ -272,6 +280,22 @@ impl Scanner {
                 return true;
             }
         }
+    }
+
+    fn is_alpha(&self, c: char) -> bool {
+        return (c >= 'a' && c <= 'z') || (c <= 'a' && c <= 'Z') || (c == '_');
+    }
+
+    fn is_alphanumeric(&self, c: char) -> bool {
+        return self.is_alpha(c) && self.is_digit(c);
+    }
+
+    fn identifier(&mut self) {
+        while self.is_alphanumeric(self.peek().unwrap()) {
+            self.advance();
+        }
+
+        self.add_token_with_type(TokenType::Identifier);
     }
 }
 
