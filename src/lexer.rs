@@ -1,4 +1,6 @@
+extern crate once_cell;
 extern crate regex;
+use self::once_cell::sync::Lazy;
 use self::regex::Regex;
 use std::any::Any;
 use std::collections::HashMap;
@@ -40,7 +42,7 @@ enum TokenType {
     False,
     Fun,
     For,
-    IF,
+    If,
     NIL,
     OR,
     ECHO,
@@ -85,6 +87,13 @@ struct Scanner {
     current: u32,
     line: u32,
 }
+
+static KEYWORDS: Lazy<HashMap<&'static str, TokenType>> = Lazy::new(|| {
+    let mut map = HashMap::new();
+    map.insert("if", TokenType::If);
+    map.insert("else", TokenType::Else);
+    map
+});
 
 impl Scanner {
     fn new(source_code: String) -> Scanner {
@@ -198,6 +207,7 @@ impl Scanner {
             default => {
                 if self.is_digit(default.unwrap()) {
                     self.number()
+                // var _abc = valid variable identifier; 1abc = invalid variable identifier
                 } else if self.is_alpha(default.unwrap()) {
                     self.identifier();
                 } else {
@@ -295,7 +305,9 @@ impl Scanner {
             self.advance();
         }
 
-        self.add_token_with_type(TokenType::Identifier);
+        let text = &self.source_code[self.start as usize..self.current as usize];
+        let token_type: TokenType = KEYWORDS.get(text).unwrap_or(&TokenType::Identifier).clone();
+        self.add_token_with_type(token_type);
     }
 }
 
