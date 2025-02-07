@@ -4,5 +4,5 @@ version = "0.1.0"
 authors = ["Gutts-n <57202549+Gutts-n@users.noreply.github.com>"]
 
 [dependencies]
-once_cell = "1.20.2"
 regex = "1"
+lazy_static = "1.5"

@@ -1,10 +1,10 @@
-extern crate once_cell;
+extern crate lazy_static;
 extern crate regex;
-use self::once_cell::sync::Lazy;
+use self::lazy_static::lazy_static;
 use self::regex::Regex;
 use std::any::Any;
-use std::collections::HashMap;
-
+use std::collections::HashMap; // This line is crucial!
+                               //
 #[derive(Clone)]
 enum TokenType {
     // Single-character tokens.
@@ -13,6 +13,7 @@ enum TokenType {
     LeftBrace,
     RightBrace,
     Comma,
+    Print,
     Dot,
     Minus,
     Plus,
@@ -43,15 +44,15 @@ enum TokenType {
     Fun,
     For,
     If,
-    NIL,
-    OR,
+    Nil,
+    Or,
     ECHO,
-    RETURN,
-    SUPER,
-    THIS,
-    TRUE,
-    VAR,
-    WHILE,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
 
     EOF,
     EqualAndEqual,
@@ -88,12 +89,28 @@ struct Scanner {
     line: u32,
 }
 
-static KEYWORDS: Lazy<HashMap<&'static str, TokenType>> = Lazy::new(|| {
-    let mut map = HashMap::new();
-    map.insert("if", TokenType::If);
-    map.insert("else", TokenType::Else);
-    map
-});
+lazy_static! {
+    static ref KEYWORDS: HashMap<&'static str, TokenType> = {
+        let mut map = HashMap::new();
+        map.insert("if", TokenType::If);
+        map.insert("else", TokenType::Else);
+        map.insert("class", TokenType::Class);
+        map.insert("false", TokenType::False);
+        map.insert("for", TokenType::For);
+        map.insert("fun", TokenType::Fun);
+        map.insert("nil", TokenType::Nil);
+        map.insert("while", TokenType::While);
+        map.insert("true", TokenType::True);
+        map.insert("or", TokenType::Or);
+        map.insert("and", TokenType::And);
+        map.insert("print", TokenType::Print);
+        map.insert("return", TokenType::Return);
+        map.insert("super", TokenType::Super);
+        map.insert("this", TokenType::This);
+        map.insert("var", TokenType::Var);
+        map
+    };
+}
 
 impl Scanner {
     fn new(source_code: String) -> Scanner {
@@ -151,7 +168,7 @@ impl Scanner {
             Some('*') => self.add_token_with_type(TokenType::Start),
             Some('o') => {
                 if self.validate_symbol('r') {
-                    self.add_token_with_type(TokenType::OR);
+                    self.add_token_with_type(TokenType::Or);
                 }
             }
             // These next validations are comparing the next character after the current one and
