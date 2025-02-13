@@ -5,8 +5,8 @@ use self::regex::Regex;
 use std::any::Any;
 use std::collections::HashMap; // This line is crucial!
                                //
-#[derive(Clone)]
-enum TokenType {
+#[derive(Clone, Debug)]
+pub enum TokenType {
     // Single-character tokens.
     LeftParen,
     RigthParen,
@@ -57,8 +57,8 @@ enum TokenType {
     EOF,
     EqualAndEqual,
 }
-
-struct Token {
+#[derive(Debug)]
+pub struct Token {
     token_type: TokenType,
     lexeme: String,
     literal: Option<Box<dyn Any>>,
@@ -81,7 +81,7 @@ impl Token {
     }
 }
 
-struct Scanner {
+pub struct Scanner {
     source_code: String,
     tokens: Vec<Token>,
     start: u32,
@@ -113,7 +113,7 @@ lazy_static! {
 }
 
 impl Scanner {
-    fn new(source_code: String) -> Scanner {
+    pub fn new(source_code: String) -> Scanner {
         Scanner {
             source_code,
             tokens: Vec::new(),
@@ -138,7 +138,7 @@ impl Scanner {
             .push(Token::new(token_type, text.to_string(), literal, self.line));
     }
 
-    fn scan_tokens(&mut self) -> &Vec<Token> {
+    pub fn scan_tokens(&mut self) -> &Vec<Token> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
@@ -155,6 +155,7 @@ impl Scanner {
 
     fn scan_token(&mut self) {
         let c = self.advance();
+        println!("{}", c.unwrap_or('A'));
         match c {
             Some('(') => self.add_token_with_type(TokenType::LeftParen),
             Some(')') => self.add_token_with_type(TokenType::RigthParen),
@@ -221,19 +222,16 @@ impl Scanner {
             Some(' ') => {}
             Some('\r') => {}
             Some('\t') => {}
+            default if self.is_digit(default.unwrap()) => self.number(),
+            default if self.is_alpha(default.unwrap()) => {
+                self.identifier();
+            }
             default => {
-                if self.is_digit(default.unwrap()) {
-                    self.number()
-                // var _abc = valid variable identifier; 1abc = invalid variable identifier
-                } else if self.is_alpha(default.unwrap()) {
-                    self.identifier();
-                } else {
-                    panic!(
-                        "Error token \"{}\"not recognized, at line {}",
-                        default.unwrap_or('?'),
-                        self.line
-                    );
-                }
+                panic!(
+                    "Error token \"{}\"not recognized, at line {}",
+                    default.unwrap_or('?'),
+                    self.line
+                );
             }
         }
     }
