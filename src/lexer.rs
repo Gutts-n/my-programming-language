@@ -124,8 +124,11 @@ impl Scanner {
     }
 
     fn advance(&mut self) -> Option<char> {
+        let c = self.source_code.chars().nth(self.current as usize);
+
         self.current += 1;
-        return self.source_code.chars().nth(self.current as usize);
+
+        return c;
     }
 
     fn add_token_with_type(&mut self, token_type: TokenType) {
@@ -155,7 +158,6 @@ impl Scanner {
 
     fn scan_token(&mut self) {
         let c = self.advance();
-        println!("{}", c.unwrap_or('A'));
         match c {
             Some('(') => self.add_token_with_type(TokenType::LeftParen),
             Some(')') => self.add_token_with_type(TokenType::RigthParen),
@@ -207,7 +209,7 @@ impl Scanner {
                 self.add_token_with_type(token_type)
             }
             Some('/') => {
-                // This code is validating if there is a dual slash and ignoring anything inside of
+                // This code is validating if there is a dual slash and ignoring anything after it
                 // this because it represents a commentary
                 if self.validate_symbol('/') {
                     while self.peek().unwrap() != '\n' && !self.is_at_end() {
@@ -301,7 +303,7 @@ impl Scanner {
         {
             true => return false,
             false => {
-                self.current = self.current + 1;
+                self.current += 1;
                 return true;
             }
         }
@@ -329,11 +331,17 @@ impl Scanner {
 pub fn generate_tokens(text: &str) {
     let string_regex = Regex::new(r#""[\w\s]*""#).unwrap();
     let number_regex = Regex::new(r"\d+\.?\d+").unwrap();
-    let parentheses_regex = Regex::new(r"\(+\)+").unwrap();
+    let parentheses_regex = Regex::new(r"\(|\)").unwrap();
+    let comment_regex = Regex::new(r"\/{2}.*").unwrap();
 
     let strings_matched = string_regex.find_iter(text);
     let parentheses_matched = parentheses_regex.find_iter(text);
     let numbers_matched = number_regex.find_iter(text);
+    let comments_matched = comment_regex.find_iter(text);
+
+    for mat in comments_matched {
+        println!("Comments matched: {}", mat.as_str());
+    }
 
     for mat in parentheses_matched {
         println!("Parentheses matched: {}", mat.as_str());
@@ -345,9 +353,5 @@ pub fn generate_tokens(text: &str) {
 
     for mat in numbers_matched {
         println!("Numbers matched: {}", mat.as_str());
-    }
-
-    for character in text.chars() {
-        println!("{}", character);
     }
 }
