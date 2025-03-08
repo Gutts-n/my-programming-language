@@ -1,5 +1,5 @@
 mod lexer;
-use lexer::{generate_tokens, Scanner};
+use lexer::Scanner;
 use std::fs;
 
 fn main() {

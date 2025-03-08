@@ -5,7 +5,7 @@ use self::regex::Regex;
 use std::any::Any;
 use std::collections::HashMap; // This line is crucial!
                                //
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -19,7 +19,7 @@ pub enum TokenType {
     Plus,
     Semicolon,
     SLASH,
-    Start,
+    Star,
 
     // One or two character tokens.
     Bang,
@@ -59,7 +59,7 @@ pub enum TokenType {
 }
 #[derive(Debug)]
 pub struct Token {
-    token_type: TokenType,
+    pub token_type: TokenType,
     lexeme: String,
     literal: Option<Box<dyn Any>>,
     line: u32,
@@ -168,7 +168,7 @@ impl Scanner {
             Some('-') => self.add_token_with_type(TokenType::Minus),
             Some('+') => self.add_token_with_type(TokenType::Plus),
             Some(';') => self.add_token_with_type(TokenType::Semicolon),
-            Some('*') => self.add_token_with_type(TokenType::Start),
+            Some('*') => self.add_token_with_type(TokenType::Star),
             Some('o') => {
                 if self.validate_symbol('r') {
                     self.add_token_with_type(TokenType::Or);
@@ -210,10 +210,24 @@ impl Scanner {
             }
             Some('/') => {
                 // This code is validating if there is a dual slash and ignoring anything after it
-                // this because it represents a commentary
+                // because it represents a commentary
                 if self.validate_symbol('/') {
                     while self.peek().unwrap() != '\n' && !self.is_at_end() {
                         self.advance();
+                    }
+                } else if self.validate_symbol('*') {
+                    let mut is_multiple_line_comment = true;
+                    while is_multiple_line_comment && !self.is_at_end() {
+                        self.advance();
+                        if self.peek_next().unwrap() == '*'
+                            && self.peek_next_after_next().unwrap() == '/'
+                        {
+                            is_multiple_line_comment = false;
+                            // advanced twice to ignore the end of the multiple line comment as
+                            // tokens
+                            self.advance();
+                            self.advance();
+                        }
                     }
                 } else {
                     self.add_token_with_type(TokenType::SLASH)
@@ -288,6 +302,14 @@ impl Scanner {
         }
 
         return self.source_code.chars().nth((self.current + 1) as usize);
+    }
+
+    fn peek_next_after_next(&self) -> Option<char> {
+        if self.current + 2 >= self.source_code.len() as u32 {
+            return Some('\0');
+        }
+
+        return self.source_code.chars().nth((self.current + 2) as usize);
     }
 
     fn peek(&self) -> Option<char> {
