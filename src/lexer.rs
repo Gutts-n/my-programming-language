@@ -59,8 +59,8 @@ pub enum TokenType {
 }
 #[derive(Debug)]
 pub struct Token {
-    pub token_type: TokenType,
-    lexeme: String,
+    token_type: TokenType,
+    pub lexeme: String,
     literal: Option<Box<dyn Any>>,
     line: u32,
 }
