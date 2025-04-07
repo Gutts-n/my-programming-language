@@ -66,7 +66,7 @@ pub struct Token {
 }
 
 impl Token {
-    fn new(
+    pub fn new(
         token_type: TokenType,
         lexeme: String,
         literal: Option<Box<dyn Any>>,

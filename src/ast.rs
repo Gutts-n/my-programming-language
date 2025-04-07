@@ -1,60 +1,62 @@
 use crate::lexer::Token;
+use std::fmt::Debug;
 
-pub trait Expr {
-    fn accept<R>(&self, visitor: &mut dyn ExprVisitor<R>) -> R;
+// We'll use an enum approach instead of trait objects
+#[derive(Debug)]
+pub enum Expr {
+    Binary(Binary),
+    Grouping(Grouping),
+    Literal(Literal),
+    Unary(Unary),
 }
 
-pub trait ExprVisitor<R> {
-    fn visit_binary_expr(&mut self, expr: &Binary) -> R;
-    fn visit_grouping_expr(&mut self, expr: &Grouping) -> R;
-    fn visit_literal_expr(&mut self, expr: &Literal) -> R;
-    fn visit_unary_expr(&mut self, expr: &Unary) -> R;
+pub trait ExprVisitor {
+    type Output;
+    fn visit_binary_expr(&mut self, expr: &Binary) -> Self::Output;
+    fn visit_grouping_expr(&mut self, expr: &Grouping) -> Self::Output;
+    fn visit_literal_expr(&mut self, expr: &Literal) -> Self::Output;
+    fn visit_unary_expr(&mut self, expr: &Unary) -> Self::Output;
 }
 
-#[derive(Debug, Clone)]
+impl Expr {
+    pub fn accept<V: ExprVisitor>(&self, visitor: &mut V) -> V::Output {
+        match self {
+            Expr::Binary(b) => visitor.visit_binary_expr(b),
+            Expr::Grouping(g) => visitor.visit_grouping_expr(g),
+            Expr::Literal(l) => visitor.visit_literal_expr(l),
+            Expr::Unary(u) => visitor.visit_unary_expr(u),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Binary {
     pub left: Box<Expr>,
     pub operator: Token,
     pub right: Box<Expr>,
 }
-pub struct AstPrinter;
 
-impl Expr for Binary {
-    fn accept<R>(&self, visitor: &mut dyn ExprVisitor<R>) -> R {
-        visitor.visit_binary_expr(self)
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Grouping {
     pub expression: Box<Expr>,
 }
 
-impl Expr for Grouping {
-    fn accept<R>(&self, visitor: &mut dyn ExprVisitor<R>) -> R {
-        visitor.visit_grouping_expr(self)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Literal {
-    pub value: Literal,
-}
-
-impl Expr for Literal {
-    fn accept<R>(&self, visitor: &mut dyn ExprVisitor<R>) -> R {
-        visitor.visit_literal_expr(self)
-    }
+    pub value: LiteralValue,
 }
 
 #[derive(Debug, Clone)]
+pub enum LiteralValue {
+    Integer(i64),
+    Float(f64),
+    String(String),
+    Boolean(bool),
+    Nil,
+}
+
+#[derive(Debug)]
 pub struct Unary {
     pub operator: Token,
     pub right: Box<Expr>,
-}
-
-impl Expr for Unary {
-    fn accept<R>(&self, visitor: &mut dyn ExprVisitor<R>) -> R {
-        visitor.visit_unary_expr(self)
-    }
 }

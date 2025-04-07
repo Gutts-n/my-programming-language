@@ -1,35 +1,18 @@
 mod ast;
 mod ast_printer;
 mod lexer;
+mod rpn_ast_printer;
 
-use ast::{Binary, Expr};
+use ast::{Binary, Expr, Grouping, Literal, LiteralValue, Unary};
 use ast_printer::AstPrinter;
-use lexer::Scanner;
+use lexer::{Scanner, Token, TokenType};
+use rpn_ast_printer::RPNAstPrinter;
 use std::fs;
-mod tools;
 use std::fs::File;
 use std::io::BufWriter;
 
-fn main() -> std::io::Result<()> {
-    Ok(())
-}
-
-fn generate_ast() {
-    let path = "../ast.rs";
-    let file = File::create(path)?;
-    let mut writer = BufWriter::new(file);
-
-    tools::generate_structs::define_ast(
-        &mut writer,
-        "Expr",
-        &[
-            ("Binary", "Expr left, Token operator, Expr right"),
-            ("Grouping", "Expr expression"),
-            ("Literal", "Object value"),
-            ("Unary", "Token operator, Expr right"),
-        ],
-    )?;
-    println!("AST written to {}", path);
+fn main() {
+    read_ast();
 }
 
 fn read_file() {
@@ -42,4 +25,48 @@ fn read_file() {
     }
 }
 
-fn read_ast() {}
+fn read_ast() {
+    // let unary: Box<Expr> = Box::new(Expr::Unary(Unary {
+    //     operator: Token::new(TokenType::Minus, "-".into(), None, 1),
+    //     right: Box::new(Expr::Literal(Literal {
+    //         value: LiteralValue::Integer(123),
+    //     })),
+    // }));
+    //
+    // let expr = Expr::Binary(Binary {
+    //     left: unary,
+    //     operator: Token::new(TokenType::Star, "*".into(), None, 1),
+    //     right: Box::new(Expr::Grouping(Grouping {
+    //         expression: Box::new(Expr::Literal(Literal {
+    //             value: LiteralValue::Float(45.67),
+    //         })),
+    //     })),
+    // });
+    // let mut printer = AstPrinter {};
+    let expr = Expr::Binary(Binary {
+        left: Box::new(Expr::Binary(Binary {
+            left: Box::new(Expr::Literal(Literal {
+                value: LiteralValue::Integer(1),
+            })),
+
+            operator: Token::new(TokenType::Star, "+".into(), None, 1),
+            right: Box::new(Expr::Literal(Literal {
+                value: LiteralValue::Integer(2),
+            })),
+        })),
+        operator: Token::new(TokenType::Star, "*".into(), None, 1),
+        right: Box::new(Expr::Binary(Binary {
+            left: Box::new(Expr::Literal(Literal {
+                value: LiteralValue::Integer(4),
+            })),
+
+            operator: Token::new(TokenType::Star, "-".into(), None, 1),
+            right: Box::new(Expr::Literal(Literal {
+                value: LiteralValue::Integer(3),
+            })),
+        })),
+    });
+    let mut printer = RPNAstPrinter {};
+
+    println!("{}", printer.print(&expr));
+}

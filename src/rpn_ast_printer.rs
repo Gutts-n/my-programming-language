@@ -1,17 +1,17 @@
 use crate::ast::{Binary, Expr, ExprVisitor, Grouping, Literal, LiteralValue, Unary};
 
-pub struct AstPrinter;
+pub struct RPNAstPrinter;
 
-impl ExprVisitor for AstPrinter {
+impl ExprVisitor for RPNAstPrinter {
     type Output = String;
     fn visit_binary_expr(&mut self, expr: &Binary) -> Self::Output {
         self.parenthesize(&expr.operator.lexeme, &[&expr.left, &expr.right])
     }
-    
+
     fn visit_grouping_expr(&mut self, expr: &Grouping) -> Self::Output {
         self.parenthesize("group", &[&expr.expression])
     }
-    
+
     fn visit_literal_expr(&mut self, expr: &Literal) -> Self::Output {
         match &expr.value {
             LiteralValue::Nil => String::from("nil"),
@@ -21,30 +21,29 @@ impl ExprVisitor for AstPrinter {
             LiteralValue::String(s) => s.clone(),
         }
     }
-    
+
     fn visit_unary_expr(&mut self, expr: &Unary) -> Self::Output {
         self.parenthesize(&expr.operator.lexeme, &[&expr.right])
     }
 }
 
-impl AstPrinter {
+impl RPNAstPrinter {
     pub fn print(&mut self, expr: &Expr) -> String {
         expr.accept(self)
     }
-    
+
     fn parenthesize(&mut self, name: &str, exprs: &[&Box<Expr>]) -> String {
         let mut builder = String::new();
-        
-        builder.push('(');
-        builder.push_str(name);
-        
+
+        // builder.push('(');
+
         for expr in exprs {
-            builder.push(' ');
             builder.push_str(&expr.accept(self));
+            builder.push(' ');
         }
-        
-        builder.push(')');
+
+        builder.push_str(name);
+        // builder.push(')');
         builder
     }
 }
-
