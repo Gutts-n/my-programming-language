@@ -1,11 +1,13 @@
 mod ast;
 mod ast_printer;
 mod lexer;
+mod parser;
 mod rpn_ast_printer;
 
 use ast::{Binary, Expr, Grouping, Literal, LiteralValue, Unary};
 use ast_printer::AstPrinter;
 use lexer::{Scanner, Token, TokenType};
+use parser::Parser;
 use rpn_ast_printer::RPNAstPrinter;
 use std::fs;
 use std::fs::File;
@@ -43,24 +45,25 @@ fn read_ast() {
     //     })),
     // });
     // let mut printer = AstPrinter {};
+    let plus_op = &Token::new(TokenType::Plus, "+".into(), None, 1);
+    let minus_op = &Token::new(TokenType::Minus, "-".into(), None, 1);
+    let multiply_op = &Token::new(TokenType::Star, "*".into(), None, 1);
     let expr = Expr::Binary(Binary {
         left: Box::new(Expr::Binary(Binary {
             left: Box::new(Expr::Literal(Literal {
                 value: LiteralValue::Integer(1),
             })),
-
-            operator: Token::new(TokenType::Star, "+".into(), None, 1),
+            operator: plus_op,
             right: Box::new(Expr::Literal(Literal {
                 value: LiteralValue::Integer(2),
             })),
         })),
-        operator: Token::new(TokenType::Star, "*".into(), None, 1),
+        operator: multiply_op,
         right: Box::new(Expr::Binary(Binary {
             left: Box::new(Expr::Literal(Literal {
                 value: LiteralValue::Integer(4),
             })),
-
-            operator: Token::new(TokenType::Star, "-".into(), None, 1),
+            operator: minus_op,
             right: Box::new(Expr::Literal(Literal {
                 value: LiteralValue::Integer(3),
             })),

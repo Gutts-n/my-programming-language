@@ -9,7 +9,7 @@ use std::collections::HashMap; // This line is crucial!
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
-    RigthParen,
+    RightParen,
     LeftBrace,
     RightBrace,
     Comma,
@@ -18,7 +18,7 @@ pub enum TokenType {
     Minus,
     Plus,
     Semicolon,
-    SLASH,
+    Slash,
     Star,
 
     // One or two character tokens.
@@ -59,13 +59,16 @@ pub enum TokenType {
 }
 #[derive(Debug)]
 pub struct Token {
-    token_type: TokenType,
+    pub token_type: TokenType,
     pub lexeme: String,
-    literal: Option<Box<dyn Any>>,
+    pub literal: Option<Box<dyn Any>>,
     line: u32,
 }
 
 impl Token {
+    pub fn get_literal<T: 'static>(&self) -> Option<&T> {
+        self.literal.as_ref()?.downcast_ref::<T>()
+    }
     pub fn new(
         token_type: TokenType,
         lexeme: String,
@@ -160,7 +163,7 @@ impl Scanner {
         let c = self.advance();
         match c {
             Some('(') => self.add_token_with_type(TokenType::LeftParen),
-            Some(')') => self.add_token_with_type(TokenType::RigthParen),
+            Some(')') => self.add_token_with_type(TokenType::RightParen),
             Some('{') => self.add_token_with_type(TokenType::LeftBrace),
             Some('}') => self.add_token_with_type(TokenType::RightBrace),
             Some(',') => self.add_token_with_type(TokenType::Comma),
@@ -230,7 +233,7 @@ impl Scanner {
                         }
                     }
                 } else {
-                    self.add_token_with_type(TokenType::SLASH)
+                    self.add_token_with_type(TokenType::Slash)
                 };
             }
             Some('"') => self.string(),

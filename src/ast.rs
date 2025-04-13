@@ -3,11 +3,11 @@ use std::fmt::Debug;
 
 // We'll use an enum approach instead of trait objects
 #[derive(Debug)]
-pub enum Expr {
-    Binary(Binary),
-    Grouping(Grouping),
+pub enum Expr<'a> {
+    Binary(Binary<'a>),
+    Grouping(Grouping<'a>),
     Literal(Literal),
-    Unary(Unary),
+    Unary(Unary<'a>),
 }
 
 pub trait ExprVisitor {
@@ -18,7 +18,7 @@ pub trait ExprVisitor {
     fn visit_unary_expr(&mut self, expr: &Unary) -> Self::Output;
 }
 
-impl Expr {
+impl Expr<'_> {
     pub fn accept<V: ExprVisitor>(&self, visitor: &mut V) -> V::Output {
         match self {
             Expr::Binary(b) => visitor.visit_binary_expr(b),
@@ -30,15 +30,15 @@ impl Expr {
 }
 
 #[derive(Debug)]
-pub struct Binary {
-    pub left: Box<Expr>,
-    pub operator: Token,
-    pub right: Box<Expr>,
+pub struct Binary<'a> {
+    pub left: Box<Expr<'a>>,
+    pub operator: &'a Token,
+    pub right: Box<Expr<'a>>,
 }
 
 #[derive(Debug)]
-pub struct Grouping {
-    pub expression: Box<Expr>,
+pub struct Grouping<'a> {
+    pub expression: Box<Expr<'a>>,
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ pub enum LiteralValue {
 }
 
 #[derive(Debug)]
-pub struct Unary {
-    pub operator: Token,
-    pub right: Box<Expr>,
+pub struct Unary<'a> {
+    pub operator: &'a Token,
+    pub right: Box<Expr<'a>>,
 }
