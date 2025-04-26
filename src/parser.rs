@@ -1,6 +1,7 @@
 use ast::{Binary, Expr, Unary};
 use lexer::{Token, TokenType};
 use std::any::Any;
+use std::fmt;
 
 use crate::ast::{Grouping, Literal, LiteralValue};
 
@@ -34,7 +35,7 @@ impl<'a> Parser<'a> {
         expression
     }
 
-    fn expression(&mut self) -> Box<Expr<'a>> {
+    fn expression(&mut self) -> Result<Box<Expr<'a>>, ParserError> {
         self.equality()
     }
 
@@ -70,7 +71,7 @@ impl<'a> Parser<'a> {
         expression
     }
 
-    fn primary(&mut self) -> Box<Expr<'a>> {
+    fn primary(&mut self) -> Result<Box<Expr<'a>>, ParserError> {
         if self.match_tokens(&[TokenType::Number]) {
             if let Some(int) = self.previous().get_literal::<i64>() {
                 return Box::new(Expr::Literal(Literal {
@@ -112,11 +113,52 @@ impl<'a> Parser<'a> {
             self.consume(TokenType::RightParen, "Expect ')' after expression.");
             return Box::new(Expr::Grouping(Grouping { expression }));
         } else {
-            panic!("Expected expression");
+            Err(self.create_error(self.peek(), "Expect expression"))
         }
     }
 
-    fn consume(&mut self, token_type: TokenType, error_message: &str) {}
+    fn consume(
+        &mut self,
+        token_type: TokenType,
+        error_message: &str,
+    ) -> Result<&Token, ParserError> {
+        if self.check(&token_type) {
+            return Ok(self.advance());
+        }
+
+        Err(self.create_error(self.peek(), error_message))
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => {
+                    return;
+                }
+                _ => {}
+            }
+        }
+
+        self.advance();
+    }
+
+    fn create_error(&mut self, token: &Token, message: &str) -> ParserError {
+        self.report_error(token, message);
+        ParserError()
+    }
 
     fn unary(&mut self) -> Box<Expr<'a>> {
         while self.match_tokens(&[TokenType::Bang, TokenType::Minus]) {
@@ -126,6 +168,25 @@ impl<'a> Parser<'a> {
         }
 
         self.primary()
+    }
+
+    fn report_error(&mut self, token: &Token, message: &str) {
+        match token.token_type {
+            TokenType::EOF => {
+                self.report(token.line as usize, " at end", message);
+            }
+            _ => {
+                self.report(
+                    token.line as usize,
+                    &format!(" at '{}'", token.lexeme),
+                    message,
+                );
+            }
+        }
+    }
+
+    fn report(&mut self, line: usize, location: &str, message: &str) {
+        eprintln!("[line {}] Error{}: {}", line, location, message);
     }
 
     fn factor(&mut self) -> Box<Expr<'a>> {
@@ -180,3 +241,14 @@ impl<'a> Parser<'a> {
         &self.tokens[self.current - 1]
     }
 }
+
+#[derive(Debug)]
+struct ParserError();
+
+impl fmt::Display for ParserError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ParserError: {}", "Error happened")
+    }
+}
+
+impl std::error::Error for ParserError {}

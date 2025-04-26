@@ -62,7 +62,7 @@ pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub literal: Option<Box<dyn Any>>,
-    line: u32,
+    pub line: u32,
 }
 
 impl Token {
