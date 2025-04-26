@@ -28,6 +28,24 @@ fn read_file() {
 }
 
 fn read_ast() {
+    let result = fs::read_to_string("example.tk");
+    let code: String = match result {
+        Ok(string_value) => string_value,
+        Err(err) => {
+            panic!("Failed: {}", err)
+        }
+    };
+    let mut scanner = Scanner::new(code);
+    let tokens = scanner.scan_tokens();
+    let mut parser = Parser::new(tokens);
+    let expression = parser.parse();
+
+    if had_error {
+        return;
+    }
+
+    let mut printer = RPNAstPrinter {};
+    println!("{}", printer.print(&expression));
     // let unary: Box<Expr> = Box::new(Expr::Unary(Unary {
     //     operator: Token::new(TokenType::Minus, "-".into(), None, 1),
     //     right: Box::new(Expr::Literal(Literal {
