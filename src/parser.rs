@@ -16,7 +16,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Option<Box<Expr<'a>>> {
-        match self.expression() {
+        match self.comma() {
             Ok(expr) => Some(expr),
             Err(_) => None,
         }
@@ -43,13 +43,13 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> Result<Box<Expr<'a>>, ParserError> {
-        self.equality()
+        self.ternary()
     }
 
     fn equality(&mut self) -> Result<Box<Expr<'a>>, ParserError> {
         let mut expression = self.comparison()?;
 
-        while self.match_tokens(&[TokenType::BangOrEqual, TokenType::EqualAndEqual]) {
+        while self.match_tokens(&[TokenType::BangAndEqual, TokenType::EqualAndEqual]) {
             let operator: &'a Token = self.previous();
             let right: Box<Expr<'a>> = self.comparison()?;
             expression = Box::new(Expr::Binary(Binary {
@@ -123,10 +123,12 @@ impl<'a> Parser<'a> {
             Err(self.create_error(self.peek(), "Expect expression"))
         }
     }
+
     fn create_error(&mut self, token: &Token, message: &str) -> ParserError {
         self.report_error(token, message);
         ParserError()
     }
+
     fn report_error(&mut self, token: &Token, message: &str) {
         match token.token_type {
             TokenType::EOF => {
@@ -156,6 +158,38 @@ impl<'a> Parser<'a> {
 
     fn report(&mut self, line: usize, location: &str, message: &str) {
         eprintln!("[line {}] Error{}: {}", line, location, message);
+    }
+
+    fn comma(&mut self) -> Result<Box<Expr<'a>>, ParserError> {
+        let mut expression = self.expression()?;
+
+        while self.match_tokens(&[TokenType::Comma]) {
+            let operator: &'a Token = self.previous();
+            let right: Box<Expr<'a>> = self.expression()?;
+            expression = Box::new(Expr::Binary(Binary {
+                left: expression,
+                operator,
+                right,
+            }));
+        }
+
+        Ok(expression)
+    }
+
+    fn ternary(&mut self) -> Result<Box<Expr<'a>>, ParserError> {
+        let mut expression = self.equality()?;
+
+        while self.match_tokens(&[TokenType::Question, TokenType::Colon]) {
+            let operator: &'a Token = self.previous();
+            let right: Box<Expr<'a>> = self.expression()?;
+            expression = Box::new(Expr::Binary(Binary {
+                left: expression,
+                operator,
+                right,
+            }));
+        }
+
+        Ok(expression)
     }
 
     fn unary(&mut self) -> Result<Box<Expr<'a>>, ParserError> {

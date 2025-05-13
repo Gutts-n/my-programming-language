@@ -23,11 +23,13 @@ pub enum TokenType {
 
     // One or two character tokens.
     Bang,
-    BangOrEqual,
+    BangAndEqual,
     Equal,
     Arrow,
     Greater,
     GreaterOrEqual,
+    Question,
+    Colon,
     Less,
     LessOrEqual,
 
@@ -170,6 +172,8 @@ impl Scanner {
             Some('.') => self.add_token_with_type(TokenType::Dot),
             Some('-') => self.add_token_with_type(TokenType::Minus),
             Some('+') => self.add_token_with_type(TokenType::Plus),
+            Some('?') => self.add_token_with_type(TokenType::Question),
+            Some(':') => self.add_token_with_type(TokenType::Colon),
             Some(';') => self.add_token_with_type(TokenType::Semicolon),
             Some('*') => self.add_token_with_type(TokenType::Star),
             Some('o') => {
@@ -181,7 +185,7 @@ impl Scanner {
             // validating if its a equal to return the symbol + equal combination
             Some('!') => {
                 let token_type = if self.validate_symbol('=') {
-                    TokenType::BangOrEqual
+                    TokenType::BangAndEqual
                 } else {
                     TokenType::Bang
                 };
@@ -214,27 +218,40 @@ impl Scanner {
             Some('/') => {
                 // This code is validating if there is a dual slash and ignoring anything after it
                 // because it represents a commentary
-                if self.validate_symbol('/') {
-                    while self.peek().unwrap() != '\n' && !self.is_at_end() {
+                if self.peek() == Some('/') {
+                    // Single line comment - consume until end of line
+                    self.advance(); // consume the second '/'
+                    while self.peek() != Some('\n') && !self.is_at_end() {
                         self.advance();
                     }
-                } else if self.validate_symbol('*') {
-                    let mut is_multiple_line_comment = true;
-                    while is_multiple_line_comment && !self.is_at_end() {
-                        self.advance();
-                        if self.peek_next().unwrap() == '*'
-                            && self.peek_next_after_next().unwrap() == '/'
-                        {
-                            is_multiple_line_comment = false;
-                            // advanced twice to ignore the end of the multiple line comment as
-                            // tokens
-                            self.advance();
-                            self.advance();
+                } else if self.peek() == Some('*') {
+                    // Multi-line comment - consume until '*/'
+                    self.advance(); // consume the '*'
+                    while !self.is_at_end() {
+                        if self.peek() == Some('*') && self.peek_next() == Some('/') {
+                            // Found end of comment
+                            self.advance(); // consume '*'
+                            self.advance(); // consume '/'
+                            break;
                         }
+
+                        // Keep track of newlines within comments
+                        if self.peek() == Some('\n') {
+                            self.line += 1;
+                        }
+
+                        self.advance();
+                    }
+
+                    // Check if we ended due to EOF (unclosed comment)
+                    if self.is_at_end() {
+                        // Handle error - unclosed comment
+                        // self.error(self.line, "Unterminated multiline comment.");
                     }
                 } else {
-                    self.add_token_with_type(TokenType::Slash)
-                };
+                    // Just a regular division operator
+                    self.add_token_with_type(TokenType::Slash);
+                }
             }
             Some('"') => self.string(),
             Some('\n') => self.line = self.line + 1,
